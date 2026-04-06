@@ -59,8 +59,13 @@ app.get("/", (req, res) => {
 });
 
 // --------------------
-// Start Server
+// Start Server for local development and non-Vercel deployment
 // --------------------
-app.listen(PORT, () =>
-  console.log(`🚀 Backend running on http://localhost:${PORT}`)
-);
+if (!process.env.VERCEL) {
+  app.listen(PORT, () =>
+    console.log(`🚀 Backend running on http://localhost:${PORT}`)
+  );
+}
+
+// Export for Vercel serverless
+export default app;

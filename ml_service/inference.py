@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from PIL import Image
 import torch.nn.functional as F
-from torchvision import transforms
+from torchvision import transforms, models as tv_models
 
 
 class RetinopathyModel:
@@ -16,13 +16,37 @@ class RetinopathyModel:
 
         checkpoint = torch.load(model_path, map_location=self.device)
 
-        self.class_to_idx = checkpoint["class_to_idx"]
-        self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
+        if isinstance(checkpoint, dict) and "class_to_idx" in checkpoint and "model_state" in checkpoint:
+            self.class_to_idx = checkpoint["class_to_idx"]
+            self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
+            model_state = checkpoint["model_state"]
+        else:
+            model_state = checkpoint
+            num_classes = None
+            for key, value in model_state.items():
+                if key.endswith("classifier.weight") or key.endswith("head.weight") or key.endswith("fc.weight"):
+                    num_classes = value.shape[0]
+                    break
+            if num_classes is None:
+                raise ValueError("Could not infer number of classes from the checkpoint")
+            self.class_to_idx = {f"class_{i}": i for i in range(num_classes)}
+            self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
 
-        self.model = timm.create_model("vit_base_patch16_224", pretrained=False)
-        self.model.head = torch.nn.Linear(self.model.head.in_features, len(self.class_to_idx))
+        model_name = model_path.split(os.sep)[-1].lower()
+        if "densenet" in model_name:
+            self.model = tv_models.densenet121(pretrained=False)
+            self.model.classifier = torch.nn.Linear(self.model.classifier.in_features, len(self.class_to_idx))
+        elif "efficientnet" in model_name:
+            self.model = tv_models.efficientnet_b0(pretrained=False)
+            self.model.classifier[1] = torch.nn.Linear(self.model.classifier[1].in_features, len(self.class_to_idx))
+        elif "resnet" in model_name:
+            self.model = tv_models.resnet50(pretrained=False)
+            self.model.fc = torch.nn.Linear(self.model.fc.in_features, len(self.class_to_idx))
+        else:
+            self.model = timm.create_model("vit_base_patch16_224", pretrained=False)
+            self.model.head = torch.nn.Linear(self.model.head.in_features, len(self.class_to_idx))
 
-        self.model.load_state_dict(checkpoint["model_state"])
+        self.model.load_state_dict(model_state)
         self.model.to(self.device)
         self.model.eval()
 

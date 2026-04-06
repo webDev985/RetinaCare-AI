@@ -1,0 +1,17 @@
+.git
+.vercel
+node_modules
+venv
+venv_py311
+*.log
+*.env
+backend/uploads
+frontend/uploads
+ml_service/temp_uploads
+ml_service/venv
+ml_service/venv_py311
+ml_service/__pycache__
+frontend/dist
+frontend/resources
+backend/node_modules
+colored_images

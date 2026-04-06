@@ -1,0 +1,16 @@
+venv/
+venv_py311/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.DS_Store
+.git
+.gitignore
+.vercel
+.vercelignore
+ml_service/venv/
+ml_service/venv_py311/
+results/
+temp_uploads/

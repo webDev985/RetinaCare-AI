@@ -7,7 +7,14 @@ from inference import RetinopathyModel
 
 app = FastAPI()
 
-model = RetinopathyModel("models/vit_best.pth")
+model_path = os.environ.get("MODEL_PATH", "models/densenet.pth")
+model = None
+try:
+    model = RetinopathyModel(model_path)
+except Exception as e:
+    print(f"❌ Failed to load ML model: {e}")
+    model = None
+
 UPLOAD_FOLDER = "temp_uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -21,6 +28,12 @@ app.add_middleware(
 
 @app.post("/predict")
 async def predict(image: UploadFile = File(...)):
+    if model is None:
+        return {
+            "success": False,
+            "message": "ML model not available. Check MODEL_PATH and model file."
+        }
+
     file_path = os.path.join(UPLOAD_FOLDER, image.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
@@ -48,4 +61,5 @@ def root():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="localhost", port=8001)
+    port = int(os.environ.get("PORT", 8001))
+    uvicorn.run(app, host="0.0.0.0", port=port)
