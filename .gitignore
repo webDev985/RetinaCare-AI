@@ -18,3 +18,14 @@ build/
 
 # OS
 .DS_Store
+.vercel
+
+# Uploads
+backend/uploads/
+frontend/uploads/
+ml_service/temp_uploads/
+
+# ML Service models (too large for Vercel)
+ml_service/models/
+ml_service/results/
+ml_service/venv_py311/

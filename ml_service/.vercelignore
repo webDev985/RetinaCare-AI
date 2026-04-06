@@ -1,0 +1,7 @@
+models/
+results/
+venv_py311/
+*.pth
+__pycache__/
+.git
+.DS_Store
