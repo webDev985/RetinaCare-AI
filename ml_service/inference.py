@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 import torch.nn.functional as F
 from torchvision import transforms, models as tv_models
+import os
 
 
 class RetinopathyModel:

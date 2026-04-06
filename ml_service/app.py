@@ -7,7 +7,7 @@ from inference import RetinopathyModel
 
 app = FastAPI()
 
-model_path = os.environ.get("MODEL_PATH", "models/densenet.pth")
+model_path = os.environ.get("MODEL_PATH", "ml_service/models/densenet.pth")
 model = None
 try:
     model = RetinopathyModel(model_path)
