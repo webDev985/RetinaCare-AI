@@ -7,41 +7,72 @@ import Dashboard from "./pages/Dashboard";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
+import Footer from "./components/Footer";
+import Home from "./pages/Home";
 
 import "./utils/fixLeafletIcons";
 
 export default function App() {
   const location = useLocation();
-  const [auth, setAuth] = useState(!!localStorage.getItem("token"));
+  const [auth, setAuth] = useState(false);
 
-  // Re-check token whenever route changes
+  // ✅ Auth check
   useEffect(() => {
-    setAuth(!!localStorage.getItem("token"));
+    const token = localStorage.getItem("token");
+    setAuth(!!token);
   }, [location.pathname]);
 
+  // ❌ REMOVED BAD REDIRECT (IMPORTANT)
+  // useEffect(() => {
+  //   if (performance.navigation.type === 1) {
+  //     window.location.href = "/";
+  //   }
+  // }, []);
+
+  // ✅ Hide footer on auth pages
+  const hideFooterRoutes = [
+    "/login",
+    "/signup",
+    "/forgot-password",
+    "/reset-password",
+  ];
+
+  const hideFooter = hideFooterRoutes.some((route) =>
+    location.pathname.startsWith(route)
+  );
+
   return (
-    <Routes>
-      {/* Root Route */}
-      <Route
-        path="/"
-        element={auth ? <Navigate to="/dashboard" /> : <Navigate to="/login" />}
-      />
+    <>
+      <Routes>
 
-      {/* Auth Routes */}
-      <Route path="/login" element={!auth ? <Login /> : <Navigate to="/dashboard" />} />
-      <Route path="/signup" element={!auth ? <Signup /> : <Navigate to="/dashboard" />} />
-      <Route path="/verify-email/:token" element={<VerifyEmail />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
+        {/* HOME */}
+        <Route path="/" element={<Home />} />
 
-      {/* Protected Dashboard */}
-      <Route
-        path="/dashboard"
-        element={auth ? <Dashboard /> : <Navigate to="/login" />}
-      />
+        {/* AUTH */}
+        <Route
+          path="/login"
+          element={!auth ? <Login /> : <Navigate to="/dashboard" />}
+        />
+        <Route
+          path="/signup"
+          element={!auth ? <Signup /> : <Navigate to="/dashboard" />}
+        />
 
-      {/* 404 fallback */}
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+        <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+        {/* DASHBOARD (PROTECTED) */}
+        <Route
+          path="/dashboard"
+          element={auth ? <Dashboard /> : <Navigate to="/login" />}
+        />
+
+        <Route path="*" element={<Navigate to="/" />} />
+
+      </Routes>
+
+      {!hideFooter && <Footer />}
+    </>
   );
 }

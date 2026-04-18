@@ -10,7 +10,7 @@ import L from "leaflet";
 import polyline from "@mapbox/polyline";
 import "leaflet/dist/leaflet.css";
 
-// 🌍 Distance
+/* 🌍 DISTANCE */
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -25,7 +25,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-// Icons
+/* 📍 ICONS */
 const defaultIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
@@ -44,26 +44,20 @@ export default function HospitalMap({ location, role, severity }) {
   const [duration, setDuration] = useState(null);
   const [error, setError] = useState("");
 
-  // 🔹 Fetch hospitals
+  /* ================= FETCH ================= */
   useEffect(() => {
     if (!location || role === "doctor") return;
 
     fetch(
-      `http://localhost:5000/api/hospitals/nearby?lat=${location.lat}&lng=${location.lng}`
+      `http://localhost:5001/api/hospitals/nearby?lat=${location.lat}&lng=${location.lng}`
     )
       .then((res) => res.json())
       .then((data) => {
-        console.log("API Response:", data);
-
-        // ✅ FIX: Ensure array
         let hospitalArray = [];
 
-        if (Array.isArray(data)) {
-          hospitalArray = data;
-        } else if (data.hospitals && Array.isArray(data.hospitals)) {
-          hospitalArray = data.hospitals;
-        } else {
-          console.error("Invalid API format:", data);
+        if (Array.isArray(data)) hospitalArray = data;
+        else if (data.hospitals) hospitalArray = data.hospitals;
+        else {
           setError("Invalid hospital data");
           return;
         }
@@ -71,16 +65,11 @@ export default function HospitalMap({ location, role, severity }) {
         setHospitals(hospitalArray);
         findNearest(hospitalArray);
       })
-      .catch((err) => {
-        console.error(err);
-        setError("Failed to fetch hospitals");
-      });
+      .catch(() => setError("Failed to fetch hospitals"));
   }, [location, role]);
 
-  // 🔹 Find nearest
+  /* ================= NEAREST ================= */
   const findNearest = (data) => {
-    if (!Array.isArray(data)) return;
-
     let min = Infinity;
     let closest = null;
 
@@ -103,7 +92,7 @@ export default function HospitalMap({ location, role, severity }) {
     setNearest(closest);
   };
 
-  // 🔹 Routing
+  /* ================= ROUTE ================= */
   const getRoute = async (destLat, destLng) => {
     try {
       const res = await fetch(
@@ -112,7 +101,7 @@ export default function HospitalMap({ location, role, severity }) {
 
       const data = await res.json();
 
-      if (!data.routes || data.routes.length === 0) return;
+      if (!data.routes?.length) return;
 
       const decoded = polyline.decode(data.routes[0].geometry);
       setRoute(decoded);
@@ -120,64 +109,52 @@ export default function HospitalMap({ location, role, severity }) {
       setDistance((data.routes[0].distance / 1000).toFixed(2));
       setDuration((data.routes[0].duration / 60).toFixed(0));
     } catch (err) {
-      console.error("Route error:", err);
+      console.error(err);
     }
   };
 
-  // 🔔 Emergency trigger
+  /* 🚑 EMERGENCY */
   useEffect(() => {
     if (!severity || !nearest) return;
 
-    if (
-      severity.toLowerCase().includes("severe") ||
-      severity.toLowerCase().includes("proliferative")
-    ) {
-      alert("⚠️ Emergency detected. Routing to nearest hospital.");
+    const sev = severity.toLowerCase();
+
+    if (sev.includes("severe") || sev.includes("proliferative")) {
       getRoute(nearest.lat, nearest.lon);
     }
   }, [severity, nearest]);
 
-  // ❌ Prevent crash
-  if (!Array.isArray(hospitals)) {
-    return <div>Loading hospitals...</div>;
-  }
-
-  if (role === "doctor") return null;
+  if (!location || role === "doctor") return null;
 
   return (
-    <div className="bg-slate-900 p-4 rounded-2xl space-y-4">
-      <h2 className="text-xl text-cyan-400 font-bold">
+    <div className="bg-slate-900/70 backdrop-blur-xl border border-slate-800 rounded-3xl p-5 space-y-4 shadow-lg">
+
+      <h2 className="text-xl font-bold text-cyan-400">
         Nearby Eye Hospitals
       </h2>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p className="text-red-400 text-sm">{error}</p>}
 
-      <MapContainer
-        center={[location?.lat || 28.6, location?.lng || 77.2]}
-        zoom={13}
-        style={{ height: "60vh", width: "100%" }}
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+      {/* MAP */}
+      <div className="rounded-xl overflow-hidden">
+        <MapContainer
+          center={[location.lat, location.lng]}
+          zoom={13}
+          style={{ height: "50vh", width: "100%" }}
+        >
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        {location && (
+          {/* USER */}
           <Marker position={[location.lat, location.lng]} icon={defaultIcon}>
             <Popup>Your Location</Popup>
           </Marker>
-        )}
 
-        {/* ✅ SAFE MAP */}
-        {Array.isArray(hospitals) &&
-          hospitals.map((h, index) => (
+          {/* HOSPITALS */}
+          {hospitals.map((h, i) => (
             <Marker
-              key={index}
+              key={i}
               position={[h.lat, h.lon]}
-              icon={
-                nearest && h.id === nearest.id
-                  ? nearestIcon
-                  : defaultIcon
-              }
+              icon={nearest?.id === h.id ? nearestIcon : defaultIcon}
               eventHandlers={{
                 click: () => getRoute(h.lat, h.lon),
               }}
@@ -185,33 +162,46 @@ export default function HospitalMap({ location, role, severity }) {
               <Popup>
                 <strong>{h.tags?.name || "Hospital"}</strong>
                 <br />
-                {nearest && h.id === nearest.id && "⭐ Nearest"}
+                {nearest?.id === h.id && "⭐ Nearest"}
               </Popup>
             </Marker>
           ))}
 
-        {route.length > 0 && (
-          <Polyline positions={route} color="red" />
-        )}
-      </MapContainer>
+          {/* ROUTE */}
+          {route.length > 0 && (
+            <Polyline positions={route} color="#ef4444" />
+          )}
+        </MapContainer>
+      </div>
 
+      {/* INFO PANEL */}
       {nearest && (
-        <div>
-          <p>⭐ Nearest: {nearest.tags?.name}</p>
-          <p>Distance: {nearest.distance} km</p>
+        <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-sm">
+          <p className="text-cyan-400 font-semibold">
+            ⭐ {nearest.tags?.name || "Nearest Hospital"}
+          </p>
+          <p className="text-slate-400">
+            Distance: {nearest.distance} km
+          </p>
         </div>
       )}
 
-      {distance && (
-        <div>
-          <p>Distance: {distance} km</p>
-          <p>Time: {duration} mins</p>
+      {(distance || duration) && (
+        <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-sm">
+          <p>🚗 Distance: {distance} km</p>
+          <p>⏱ Time: {duration} mins</p>
         </div>
       )}
 
+      {/* 🚑 BUTTON */}
       {nearest && (
-        <button onClick={() => getRoute(nearest.lat, nearest.lon)}>
-          🚑 Emergency Route
+        <button
+          onClick={() => getRoute(nearest.lat, nearest.lon)}
+          className="w-full py-3 rounded-xl font-semibold 
+                     bg-gradient-to-r from-red-500 to-pink-600 
+                     hover:scale-105 transition-all shadow-lg"
+        >
+          🚑 Navigate to Nearest Hospital
         </button>
       )}
     </div>

@@ -4,6 +4,7 @@ import fs from "fs";
 
 export async function callML(imagePath) {
   const mlUrl = process.env.ML_URL;
+
   if (!mlUrl) {
     throw new Error("ML_URL not set in .env");
   }
@@ -11,9 +12,22 @@ export async function callML(imagePath) {
   const form = new FormData();
   form.append("image", fs.createReadStream(imagePath));
 
-  const headers = form.getHeaders();
+  try {
+    const res = await axios.post(mlUrl, form, {
+      headers: form.getHeaders(),
+      timeout: 10000, // ⏱ prevent hanging
+    });
 
-  const res = await axios.post(mlUrl, form, { headers });
+    console.log("✅ ML Response:", res.data);
 
-  return res.data; // { success, ml: { prediction, confidence, all_scores } } or error
+    if (!res.data || !res.data.ml) {
+      throw new Error("Invalid ML response format");
+    }
+
+    return res.data;
+
+  } catch (err) {
+    console.error("❌ ML ERROR:", err.message);
+    throw err;
+  }
 }

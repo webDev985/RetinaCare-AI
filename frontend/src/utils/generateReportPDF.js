@@ -2,12 +2,15 @@ import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import { getClinicalAdvice } from "./clinicalAdvice";
 
-/**
- * @param elementId - DOM id (not used but kept for compatibility)
- * @param prediction - DR severity
- * @param confidence - model confidence
- * @param patient - patient object { name, age, bloodGroup }
- */
+/* 🔥 ADD THIS MAPPING HERE */
+const ADVICE_LABELS = {
+  "No DR": "No DR",
+  Mild: "Mild",
+  Moderate: "Moderate",
+  Severe: "Severe",
+  "Proliferative DR": "Proliferative", // ✅ FIX
+};
+
 export async function generatePDF(
   elementId,
   prediction,
@@ -19,7 +22,10 @@ export async function generatePDF(
   }
 ) {
   const doc = new jsPDF("p", "mm", "a4");
-  const advice = getClinicalAdvice(prediction);
+
+  /* 🔥 FIX APPLIED HERE */
+  const adviceKey = ADVICE_LABELS[prediction] || prediction;
+  const advice = getClinicalAdvice(adviceKey);
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -82,14 +88,22 @@ export async function generatePDF(
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text(advice.level, 20, 155);
+
+  doc.text(advice?.level || "Consult Specialist", 20, 155);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
-  doc.text(advice.advice, 20, 165, {
-    maxWidth: 170,
-    lineHeightFactor: 1.6,
-  });
+
+  doc.text(
+    advice?.advice ||
+      "Further medical evaluation is recommended.",
+    20,
+    165,
+    {
+      maxWidth: 170,
+      lineHeightFactor: 1.6,
+    }
+  );
 
   /* ================= DOCTOR RECOMMENDATION ================= */
   doc.setFont("helvetica", "bold");
