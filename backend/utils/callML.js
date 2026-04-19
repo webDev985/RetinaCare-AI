@@ -15,7 +15,7 @@ export async function callML(imagePath) {
   try {
     const res = await axios.post(mlUrl, form, {
       headers: form.getHeaders(),
-      timeout: 10000, // ⏱ prevent hanging
+      timeout: 60000, // ⏱ prevent hanging
     });
 
     console.log("✅ ML Response:", res.data);
